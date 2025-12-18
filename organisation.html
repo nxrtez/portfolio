@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RTEZ — Organisation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  --bg: #0b0f1a;
+  --card: #12182b;
+  --accent: #4da3ff;
+  --text: #e8ecff;
+  --muted: #9aa3c7;
+  --border: rgba(255,255,255,0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  max-width: 1100px;
+  margin: auto;
+  padding: 64px 24px 32px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+header img {
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+header h1 {
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 800;
+}
+
+header p {
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+main {
+  max-width: 1100px;
+  margin: auto;
+  padding: 0 24px 80px;
+  display: grid;
+  gap: 40px;
+}
+
+section {
+  background: var(--card);
+  padding: 28px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+h2 {
+  font-size: 26px;
+  margin-bottom: 16px;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* ===== Repos ===== */
+
+.repo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.repo {
+  background: rgba(0,0,0,0.25);
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.repo h3 { font-size: 18px; margin-bottom: 6px; }
+
+.repo a { color: var(--accent); text-decoration: none; }
+
+.repo p {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.tags {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  margin-left: 6px;
+}
+
+/* ===== Team ===== */
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.member {
+  background: rgba(0,0,0,0.25);
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.member img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+}
+
+.member h4 {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.member p {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+footer {
+  text-align: center;
+  padding: 32px;
+  color: var(--muted);
+  font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <img id="orgAvatar" alt="Org logo">
+  <div>
+    <h1 id="orgName">Loading…</h1>
+    <p id="orgDesc"></p>
+    <div class="meta" id="orgMeta"></div>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <h2>About</h2>
+  <p id="orgAbout"></p>
+</section>
+
+<section>
+  <h2>Projects</h2>
+  <div id="repos" class="repo-grid">Loading…</div>
+</section>
+
+<section>
+  <h2>Team</h2>
+  <div id="team" class="team-grid">Loading…</div>
+</section>
+
+</main>
+
+<footer>
+  © <span id="year"></span> RTEZ
+</footer>
+
+<script>
+/* =====================
+   CONFIG
+===================== */
+
+const ORG = "git-rtez";
+
+/* Explicit, controlled list */
+const EMPLOYEES = [
+  "nxrtez"
+  // add more usernames here
+];
+
+document.getElementById("year").textContent = new Date().getFullYear();
+
+async function fetchJSON(url) {
+  const res = await fetch(url);
+  return res.ok ? res.json() : null;
+}
+
+/* =====================
+   LOAD ORG
+===================== */
+
+async function loadOrg() {
+  const d = await fetchJSON(`https://api.github.com/orgs/${ORG}`);
+  if (!d) return;
+
+  document.title = `${d.name} — Organisation`;
+  orgName.textContent = d.name;
+  orgDesc.textContent = d.description ?? "";
+  orgAbout.textContent = d.description ?? "";
+  orgAvatar.src = d.avatar_url;
+
+  orgMeta.innerHTML = `
+    <span>📦 ${d.public_repos} repositories</span>
+    <span>👥 ${d.followers} followers</span>
+    <span>🕒 Founded ${new Date(d.created_at).getFullYear()}</span>
+    <a href="${d.html_url}" target="_blank">GitHub</a>
+  `;
+}
+
+/* =====================
+   LOAD REPOS (FIXED)
+===================== */
+
+async function loadRepos() {
+  const reposDiv = document.getElementById("repos");
+  reposDiv.innerHTML = ""; // 🔴 IMPORTANT FIX
+
+  const repos = await fetchJSON(
+    `https://api.github.com/orgs/${ORG}/repos?per_page=100`
+  );
+
+  if (!repos || repos.length === 0) {
+    reposDiv.innerHTML = "<p>No public repositories.</p>";
+    return;
+  }
+
+  repos
+    .sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at))
+    .forEach(r => {
+      const div = document.createElement("div");
+      div.className = "repo";
+
+      div.innerHTML = `
+        <h3>
+          <a href="${r.html_url}" target="_blank">${r.name}</a>
+          ${r.fork ? `<span class="badge">Fork</span>` : ""}
+        </h3>
+        <p>${r.description ?? "No description provided."}</p>
+        <div class="tags">
+          ${r.language ?? "Unknown"} · ⭐ ${r.stargazers_count}
+          · Updated ${new Date(r.pushed_at).toLocaleDateString()}
+        </div>
+      `;
+
+      reposDiv.appendChild(div);
+    });
+}
+
+/* =====================
+   LOAD TEAM (CONTROLLED)
+===================== */
+
+async function loadTeam() {
+  const teamDiv = document.getElementById("team");
+  teamDiv.innerHTML = "";
+
+  if (EMPLOYEES.length === 0) {
+    teamDiv.innerHTML = "<p>No team members listed.</p>";
+    return;
+  }
+
+  for (const username of EMPLOYEES) {
+    const u = await fetchJSON(`https://api.github.com/users/${username}`);
+    if (!u) continue;
+
+    const div = document.createElement("div");
+    div.className = "member";
+
+    div.innerHTML = `
+      <img src="${u.avatar_url}">
+      <h4>${u.name ?? u.login}</h4>
+      <p>${u.bio ?? ""}</p>
+      <a href="${u.html_url}" target="_blank">GitHub</a>
+    `;
+
+    teamDiv.appendChild(div);
+  }
+}
+
+/* =====================
+   INIT
+===================== */
+
+loadOrg();
+loadRepos();
+loadTeam();
+</script>
+
+</body>
+</html>
