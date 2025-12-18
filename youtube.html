@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>YouTube Channel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  --bg: #0f0f0f;
+  --card: #181818;
+  --accent: #ff0000;
+  --text: #ffffff;
+  --muted: #aaaaaa;
+  --border: #272727;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: Roboto, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  padding: 48px 24px 24px;
+  max-width: 1200px;
+  margin: auto;
+}
+
+.channel {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.channel img {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+}
+
+.channel h1 {
+  font-size: 32px;
+}
+
+.channel p {
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.stats {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+main {
+  max-width: 1200px;
+  margin: auto;
+  padding: 24px;
+  display: grid;
+  gap: 32px;
+}
+
+section h2 {
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.video {
+  background: var(--card);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.video img {
+  width: 100%;
+  display: block;
+}
+
+.video div {
+  padding: 12px;
+}
+
+.video h3 {
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.video p {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+footer {
+  text-align: center;
+  padding: 32px;
+  font-size: 13px;
+  color: var(--muted);
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="channel">
+    <img id="avatar" alt="Channel avatar">
+    <div>
+      <h1 id="title">Loading…</h1>
+      <p id="description"></p>
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <h2>Popular Videos</h2>
+  <div id="videos" class="video-grid">
+    Loading…
+  </div>
+</section>
+
+</main>
+
+<footer>
+  © <span id="year"></span>
+</footer>
+
+<script>
+/* =====================
+   CONFIG
+===================== */
+
+const API_KEY = "YOUR_YOUTUBE_API_KEY";
+const CHANNEL_ID = "YOUR_CHANNEL_ID";
+
+/* =====================
+   UTIL
+===================== */
+
+document.getElementById("year").textContent = new Date().getFullYear();
+
+async function fetchJSON(url) {
+  const res = await fetch(url);
+  return res.ok ? res.json() : null;
+}
+
+/* =====================
+   LOAD CHANNEL
+===================== */
+
+async function loadChannel() {
+  const data = await fetchJSON(
+    `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${CHANNEL_ID}&key=${API_KEY}`
+  );
+
+  const c = data.items[0];
+  document.title = c.snippet.title;
+  avatar.src = c.snippet.thumbnails.high.url;
+  title.textContent = c.snippet.title;
+  description.textContent = c.snippet.description;
+
+  stats.innerHTML = `
+    <span>${Number(c.statistics.subscriberCount).toLocaleString()} subscribers</span>
+    <span>${Number(c.statistics.viewCount).toLocaleString()} views</span>
+    <span>${Number(c.statistics.videoCount).toLocaleString()} videos</span>
+    <span>Since ${new Date(c.snippet.publishedAt).getFullYear()}</span>
+  `;
+}
+
+/* =====================
+   LOAD VIDEOS
+===================== */
+
+async function loadVideos() {
+  const search = await fetchJSON(
+    `https://www.googleapis.com/youtube/v3/search?part=id&channelId=${CHANNEL_ID}&maxResults=5&order=viewCount&type=video&key=${API_KEY}`
+  );
+
+  const ids = search.items.map(v => v.id.videoId).join(",");
+
+  const data = await fetchJSON(
+    `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${ids}&key=${API_KEY}`
+  );
+
+  videos.innerHTML = "";
+
+  data.items.forEach(v => {
+    const div = document.createElement("div");
+    div.className = "video";
+    div.innerHTML = `
+      <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
+        <img src="${v.snippet.thumbnails.high.url}">
+      </a>
+      <div>
+        <h3>${v.snippet.title}</h3>
+        <p>${Number(v.statistics.viewCount).toLocaleString()} views</p>
+      </div>
+    `;
+    videos.appendChild(div);
+  });
+}
+
+/* =====================
+   INIT
+===================== */
+
+loadChannel();
+loadVideos();
+</script>
+
+</body>
+</html>
